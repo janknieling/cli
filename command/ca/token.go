@@ -127,37 +127,34 @@ $ step ca token --offline --revoke 146103349666685108195655980390445292315
 		Flags: []cli.Flag{
 			certNotAfterFlag,
 			certNotBeforeFlag,
-			notBeforeFlag,
-			notAfterFlag,
+			passwordFileFlag,
 			provisionerKidFlag,
+			sanFlag,
 			sshPrincipalFlag,
 			sshHostFlag,
+			x5cCertFlag,
+			x5cKeyFlag,
 			flags.CaURL,
 			flags.CaConfig,
 			flags.Force,
+			flags.NotAfter,
+			flags.NotBefore,
+			flags.Offline,
 			flags.Root,
 			flags.Provisioner,
-			cli.StringSliceFlag{
-				Name: "san",
-				Usage: `Add DNS or IP Address Subjective Alternative Names (SANs) that the token is
-authorized to request. A certificate signing request using this token must match
-the complete set of subjective alternative names in the token 1:1. Use the '--san'
-flag multiple times to configure multiple SANs.`,
+			cli.StringFlag{
+				Name: "cert",
+				Usage: `The public certificate <path> appended as a chain of certificate PEMs in the
+x5c header of the JWT.`,
 			},
 			cli.StringFlag{
 				Name: "key",
 				Usage: `The private key <path> used to sign the JWT. This is usually downloaded from
 the certificate authority.`,
 			},
-			passwordFileFlag,
 			cli.StringFlag{
 				Name:  "output-file",
 				Usage: "The destination <file> of the generated one-time token.",
-			},
-			cli.BoolFlag{
-				Name: "offline",
-				Usage: `Creates a token without contacting the certificate authority. Offline mode
-requires the flags <--ca-config> or <--kid>, <--issuer>, <--key>, <--ca-url>, and <--root>.`,
 			},
 			cli.BoolFlag{
 				Name: "revoke",

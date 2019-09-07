@@ -112,7 +112,15 @@ $ step ca certificate foo.internal foo.crt foo.key \
 --acme https://acme-staging-v02.api.letsencrypt.org/directory --san bar.internal
 '''`,
 		Flags: []cli.Flag{
+			acmeFlag,
+			acmeContactFlag,
+			acmeHTTPListenFlag,
+			acmeStandaloneFlag,
+			acmeWebrootFlag,
 			consoleFlag,
+			sanFlag,
+			x5cCertFlag,
+			x5cKeyFlag,
 			flags.CaConfig,
 			flags.CaURL,
 			flags.Curve,
@@ -120,73 +128,11 @@ $ step ca certificate foo.internal foo.crt foo.key \
 			flags.KTY,
 			flags.NotAfter,
 			flags.NotBefore,
+			flags.Offline,
 			flags.Provisioner,
 			flags.Root,
 			flags.Size,
 			flags.Token,
-			flags.Offline,
-			cli.StringSliceFlag{
-				Name: "san",
-				Usage: `Add DNS Name, IP Address, or Email Address Subjective Alternative Names (SANs)
-that the token is authorized to request. A certificate signing request using
-this token must match the complete set of subjective alternative names in the
-token 1:1. Use the '--san' flag multiple times to configure multiple SANs. The
-'--san' flag and the '--token' flag are mutually exlusive.`,
-			},
-			cli.StringFlag{
-				Name: "acme",
-				Usage: `ACME directory URL to be used for requesting certificates via the ACME protocol.
-Use this flag to define an ACME server other than the Step CA. If this flag is
-absent and an ACME provisioner has been selected then the '--ca-url' flag must be defined.`,
-			},
-			cli.BoolFlag{
-				Name: "standalone",
-				Usage: `Get a certificate using the ACME protocol and standalone mode for validation.
-Standalone is a mode in which the step process will run a server that will
-will respond to ACME challenge validation requests. Standalone is the default
-mode for serving challenge validation requests.`,
-			},
-			cli.StringFlag{
-				Name: "webroot",
-				Usage: `Get a certificate using the ACME protocol and webroot mode for validation.
-Webroot is a mode in which the step process will write a challenge file to a location
-being served by an existing fileserver in order to respond to ACME challenge
-validation requests.`,
-			},
-			cli.StringSliceFlag{
-				Name: "contact",
-				Usage: `Email addresses for contact as part of the ACME protocol. These contacts
-may be used to warn of certificate expration or other certificate lifetime events.
-Use the '--contact' flag multiple times to configure multiple contacts.`,
-			},
-			cli.StringFlag{
-				Name: "http-listen",
-				Usage: `Use a non-standard http address, behind a reverse proxy or load balancer, for
-serving ACME challenges. The default address is :80, which requires super user
-(sudo) privileges. This flag must be used in conjunction with the '--standalone'
-flag.`,
-				Value: ":80",
-			},
-			/*
-							TODO: Not implemented yet.
-							cli.StringFlag{
-								Name: "https-listen",
-								Usage: `Use a non-standard https address, behind a reverse proxy or load balancer, for
-				serving ACME challenges. The default address is :443, which requires super user
-				(sudo) privileges. This flag must be used in conjunction with the '--standalone'
-				flag.`,
-								Value: ":443",
-							},
-			*/
-			cli.StringFlag{
-				Name: "x5c-key",
-				Usage: `Private key, used to sign a JWT, corresponding to the certificate that will
-be stored in the 'x5c' header.`,
-			},
-			cli.StringFlag{
-				Name:  "x5c-cert",
-				Usage: "Certificate (chain) to store in the 'x5c' header of a JWT.",
-			},
 		},
 	}
 }
