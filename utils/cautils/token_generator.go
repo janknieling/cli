@@ -77,11 +77,12 @@ func (t *TokenGenerator) Token(sub string, opts ...token.Options) (string, error
 
 // SignToken generates a X.509 certificate signing token. If sans is empty, we
 // will use the subject (common name) as the only SAN.
-func (t *TokenGenerator) SignToken(sub string, sans []string) (string, error) {
+func (t *TokenGenerator) SignToken(sub string, sans []string, opts ...token.Options) (string, error) {
 	if len(sans) == 0 {
 		sans = []string{sub}
 	}
-	return t.Token(sub, token.WithSANS(sans))
+	opts = append(opts, token.WithSANS(sans))
+	return t.Token(sub, opts...)
 }
 
 // RevokeToken generates a X.509 certificate revoke token.

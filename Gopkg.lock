@@ -310,8 +310,8 @@
   revision = "de77670473b5492f5d0bce155b5c01534c2d13f7"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d6ef29a97698daa701c592fe3a6eca5a75ee5f5a2f81dc6b5c5d87345cd3c0d0"
+  branch = "x5c"
+  digest = "1:de75b2ebdf8a3887c73426766510580cdbed3be132950dc521379d4332f945fa"
   name = "github.com/smallstep/certificates"
   packages = [
     "acme",
@@ -326,7 +326,7 @@
     "server",
   ]
   pruneopts = "UT"
-  revision = "59526d3225560717b4fd0aa1192312fb6587e8aa"
+  revision = "f955e668e71b89333939204695dc9456bd61e2f6"
 
 [[projects]]
   branch = "master"

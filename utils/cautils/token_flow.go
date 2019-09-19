@@ -15,6 +15,7 @@ import (
 	"github.com/smallstep/cli/errs"
 	"github.com/smallstep/cli/exec"
 	"github.com/smallstep/cli/jose"
+	"github.com/smallstep/cli/token"
 	"github.com/smallstep/cli/ui"
 	"github.com/smallstep/cli/utils"
 	"github.com/urfave/cli"
@@ -110,6 +111,27 @@ func NewTokenFlow(ctx *cli.Context, typ int, subject string, sans []string, caUR
 			return "", err
 		}
 		return strings.TrimSpace(string(out)), nil
+	case *provisioner.X5C: // Get an X5C token
+		x5cCertFile := ctx.String("x5c-cert")
+		x5cKeyFile := ctx.String("x5c-key")
+		if len(x5cCertFile) == 0 {
+			return "", errs.RequiredWithProvisionerTypeFlag(ctx, "X5C", "x5c-cert")
+		}
+		if len(x5cKeyFile) == 0 {
+			return "", errs.RequiredWithProvisionerTypeFlag(ctx, "X5C", "x5c-key")
+		}
+
+		// Get private key from given key file
+		var opts []jose.Option
+		if passwordFile := ctx.String("password-file"); len(passwordFile) != 0 {
+			opts = append(opts, jose.WithPasswordFile(passwordFile))
+		}
+		jwk, err := jose.ParseKey(x5cKeyFile, opts...)
+		if err != nil {
+			return "", err
+		}
+		tokenGen := NewTokenGenerator("5", p.Name, audience, root, notBefore, notAfter, jwk)
+		return tokenGen.SignToken(subject, sans, token.WithX5CFile(x5cCertFile, jwk.Key))
 	case *provisioner.GCP: // Do the identity request to get the token
 		sharedContext.DisableCustomSANs = p.DisableCustomSANs
 		return p.GetIdentityToken(subject, caURL)
@@ -270,7 +292,7 @@ func provisionerPrompt(ctx *cli.Context, provisioners provisioner.List) (provisi
 	// Filter by type
 	provisioners = provisionerFilter(provisioners, func(p provisioner.Interface) bool {
 		switch p.GetType() {
-		case provisioner.TypeJWK, provisioner.TypeOIDC, provisioner.TypeACME:
+		case provisioner.TypeJWK, provisioner.TypeX5C, provisioner.TypeOIDC, provisioner.TypeACME:
 			return true
 		case provisioner.TypeGCP, provisioner.TypeAWS, provisioner.TypeAzure:
 			return true
@@ -340,6 +362,11 @@ func provisionerPrompt(ctx *cli.Context, provisioners provisioner.List) (provisi
 				Provisioner: p,
 			})
 		case *provisioner.ACME:
+			items = append(items, &provisionersSelect{
+				Name:        fmt.Sprintf("%s (%s)", p.Name, p.GetType()),
+				Provisioner: p,
+			})
+		case *provisioner.X5C:
 			items = append(items, &provisionersSelect{
 				Name:        fmt.Sprintf("%s (%s)", p.Name, p.GetType()),
 				Provisioner: p,

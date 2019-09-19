@@ -2,12 +2,14 @@ package token
 
 import (
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/smallstep/cli/crypto/pemutil"
+	"github.com/smallstep/cli/crypto/x509util"
 	"github.com/smallstep/cli/jose"
 )
 
@@ -160,16 +162,25 @@ func WithKid(s string) Options {
 }
 
 // WithX5CFile returns a Options that sets the header x5c claims.
-// If WithKid is not used a thumbprint using SHA256 will be used.
-func WithX5CFile(s string) Options {
+func WithX5CFile(certFile string, key interface{}) Options {
 	return func(c *Claims) error {
-		if s == "" {
-			return errors.New("x5c cannot be empty")
+		if certFile == "" {
+			return errors.New("x5c-cert cannot be empty")
 		}
-		certs, err := pemutil.ReadCertificateBundle(s)
+		certs, err := pemutil.ReadCertificateBundle(certFile)
 		if err != nil {
 			return errors.Wrap(err, "error reading cert file for x5c header")
 		}
+
+		if err = x509util.VerifyCertKey(certs[0], key); err != nil {
+			return errors.Wrap(err, "x5c")
+		}
+
+		if certs[0].KeyUsage&x509.KeyUsageDigitalSignature == 0 {
+			return errors.New("x5c: certificate/private-key pair used to sign " +
+				"x5c token cannot be used for digital signature")
+		}
+
 		strs := make([]string, len(certs))
 		for i, cert := range certs {
 			strs[i] = base64.StdEncoding.EncodeToString(cert.Raw)
