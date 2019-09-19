@@ -86,7 +86,7 @@ $ step ca renew internal.crt internal.key \
 // common flags used in several commands
 var (
 	acmeFlag = cli.StringFlag{
-		Name: "console",
+		Name: "acme",
 		Usage: `ACME directory URL to be used for requesting certificates via the ACME protocol.
 Use this flag to define an ACME server other than the Step CA. If this flag is
 absent and an ACME provisioner has been selected then the '--ca-url' flag must be defined.`,

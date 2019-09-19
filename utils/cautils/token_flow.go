@@ -130,7 +130,8 @@ func NewTokenFlow(ctx *cli.Context, typ int, subject string, sans []string, caUR
 		if err != nil {
 			return "", err
 		}
-		tokenGen := NewTokenGenerator("5", p.Name, audience, root, notBefore, notAfter, jwk)
+		tokenGen := NewTokenGenerator("5", p.Name,
+			fmt.Sprintf("%s#%s", audience, p.GetID()), root, notBefore, notAfter, jwk)
 		return tokenGen.SignToken(subject, sans, token.WithX5CFile(x5cCertFile, jwk.Key))
 	case *provisioner.GCP: // Do the identity request to get the token
 		sharedContext.DisableCustomSANs = p.DisableCustomSANs
