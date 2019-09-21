@@ -1,12 +1,15 @@
 package provisioner
 
 import (
+	"crypto/x509"
+	"io/ioutil"
 	"net/url"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/smallstep/certificates/authority"
 	"github.com/smallstep/certificates/authority/provisioner"
+	"github.com/smallstep/cli/crypto/pemutil"
 	"github.com/smallstep/cli/errs"
 	"github.com/smallstep/cli/flags"
 	"github.com/smallstep/cli/jose"
@@ -28,17 +31,92 @@ func addCommand() cli.Command {
 [**--configuration-endpoint**=<url>] [**--domain**=<domain>]
 [**--admin**=<email>]...
 
-**step ca provisioner add** <name> **--type**=[AWS|Azure|GCP] **--ca-config**=<file>
-[**--aws-account**=<id>]
+**step ca provisioner add** <name> **--type**=x5c
+[**--x5c-root**] [**--ca-config**=<file>]...
+
+**step ca provisioner add** <name> **--type**=[AWS|Azure|GCP]
+[**--ca-config**=<file>] [**--aws-account**=<id>]
 [**--gcp-service-account**=<name>] [**--gcp-project**=<name>]
 [**--azure-tenant**=<id>] [**--azure-resource-group**=<name>]
 [**--instance-age**=<duration>] [**--disable-custom-sans**] [**--disable-trust-on-first-use**]
 
 **step ca provisioner add** <name> **--type**=ACME **--ca-config**=<file>`,
 		Flags: []cli.Flag{
+			flags.CaConfig,
+			flags.PasswordFile,
+			cli.StringSliceFlag{
+				Name: "admin",
+				Usage: `The <email> of an admin user in an OpenID Connect provisioner, this user
+will not have restrictions in the certificates to sign. Use the
+'--admin' flag multiple times to configure multiple administrators.`,
+			},
+			cli.BoolFlag{
+				Name: "create",
+				Usage: `Create a new ECDSA key pair using curve P-256 and populate a new JWK
+provisioner with it.`,
+			},
 			cli.StringFlag{
-				Name:  "ca-config",
-				Usage: "The <file> containing the CA configuration.",
+				Name:  "client-id",
+				Usage: `The <id> used to validate the audience in an OpenID Connect token.`,
+			},
+			cli.StringFlag{
+				Name:  "client-secret",
+				Usage: `The <secret> used to obtain the OpenID Connect tokens.`,
+			},
+			cli.StringFlag{
+				Name:  "configuration-endpoint",
+				Usage: `OpenID Connect configuration <url>.`,
+			},
+			cli.BoolFlag{
+				Name: "disable-custom-sans",
+				Usage: `On cloud provisioners, if anabled only the internal DNS and IP will be added as a SAN.
+By default it will accept any SAN in the CSR.`,
+			},
+			cli.BoolFlag{
+				Name: "disable-trust-on-first-use,disable-tofu",
+				Usage: `On cloud provisioners, if enabled multiple sign request for this provisioner
+with the same instance will be accepted. By default only the first request
+will be accepted.`,
+			},
+			cli.StringSliceFlag{
+				Name: "domain",
+				Usage: `The <domain> used to validate the email claim in an OpenID Connect provisioner.
+Use the '--domain' flag multiple times to configure multiple domains.`,
+			},
+			cli.StringSliceFlag{
+				Name: "aws-account",
+				Usage: `The AWS account <id> used to validate the identity documents.
+Use the flag multiple times to configure multiple accounts.`,
+			},
+			cli.StringFlag{
+				Name:  "azure-tenant",
+				Usage: `The Microsoft Azure tenant <id> used to validate the identity tokens.`,
+			},
+			cli.StringSliceFlag{
+				Name: "azure-resource-group",
+				Usage: `The Microsoft Azure resource group <name> used to validate the identity tokens.
+Use the flag multipl etimes to configure multiple resource groups`,
+			},
+			cli.StringSliceFlag{
+				Name: "gcp-service-account",
+				Usage: `The Google service account <email> or <id> used to validate the identity tokens.
+Use the flag multiple times to configure multiple service accounts.`,
+			},
+			cli.StringSliceFlag{
+				Name: "gcp-project",
+				Usage: `The Google project <id> used to validate the identity tokens.
+Use the flag multipl etimes to configure multiple projects`,
+			},
+			cli.DurationFlag{
+				Name: "instance-age",
+				Usage: `The maximum <duration> to grant a certificate in AWS and GCP provisioners.
+A <duration> is sequence of decimal numbers, each with optional fraction and a
+unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns",
+"us" (or "µs"), "ms", "s", "m", "h".`,
+			},
+			cli.BoolFlag{
+				Name:  "ssh",
+				Usage: `Enable SSH on the new provisioners.`,
 			},
 			cli.StringFlag{
 				Name:  "type",
@@ -62,82 +140,15 @@ and must be one of:
 
     **ACME**
     : Uses the ACME protocol to create certificates.
+
+    **X5C**
+    : Uses an X509 Certificate / private key pair to sign bootstrap tokens.
 `,
 			},
-			cli.BoolFlag{
-				Name: "create",
-				Usage: `Create a new ECDSA key pair using curve P-256 and populate a new JWK
-provisioner with it.`,
-			},
 			cli.StringFlag{
-				Name:  "client-id",
-				Usage: `The <id> used to validate the audience in an OpenID Connect token.`,
-			},
-			cli.StringFlag{
-				Name:  "client-secret",
-				Usage: `The <secret> used to obtain the OpenID Connect tokens.`,
-			},
-			cli.StringFlag{
-				Name:  "configuration-endpoint",
-				Usage: `OpenID Connect configuration <url>.`,
-			},
-			cli.StringSliceFlag{
-				Name: "admin",
-				Usage: `The <email> of an admin user in an OpenID Connect provisioner, this user
-will not have restrictions in the certificates to sign. Use the
-'--admin' flag multiple times to configure multiple administrators.`,
-			},
-			cli.StringSliceFlag{
-				Name: "domain",
-				Usage: `The <domain> used to validate the email claim in an OpenID Connect provisioner.
-Use the '--domain' flag multiple times to configure multiple domains.`,
-			},
-			flags.PasswordFile,
-			cli.StringSliceFlag{
-				Name: "aws-account",
-				Usage: `The AWS account <id> used to validate the identity documents.
-Use the flag multiple times to configure multiple accounts.`,
-			},
-			cli.StringSliceFlag{
-				Name: "gcp-service-account",
-				Usage: `The Google service account <email> or <id> used to validate the identity tokens.
-Use the flag multiple times to configure multiple service accounts.`,
-			},
-			cli.StringSliceFlag{
-				Name: "gcp-project",
-				Usage: `The Google project <id> used to validate the identity tokens.
-Use the flag multipl etimes to configure multiple projects`,
-			},
-			cli.StringFlag{
-				Name:  "azure-tenant",
-				Usage: `The Microsoft Azure tenant <id> used to validate the identity tokens.`,
-			},
-			cli.StringSliceFlag{
-				Name: "azure-resource-group",
-				Usage: `The Microsoft Azure resource group <name> used to validate the identity tokens.
-Use the flag multipl etimes to configure multiple resource groups`,
-			},
-			cli.DurationFlag{
-				Name: "instance-age",
-				Usage: `The maximum <duration> to grant a certificate in AWS and GCP provisioners.
-A <duration> is sequence of decimal numbers, each with optional fraction and a
-unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns",
-"us" (or "µs"), "ms", "s", "m", "h".`,
-			},
-			cli.BoolFlag{
-				Name: "disable-custom-sans",
-				Usage: `On cloud provisioners, if anabled only the internal DNS and IP will be added as a SAN.
-By default it will accept any SAN in the CSR.`,
-			},
-			cli.BoolFlag{
-				Name: "disable-trust-on-first-use,disable-tofu",
-				Usage: `On cloud provisioners, if enabled multiple sign request for this provisioner
-with the same instance will be accepted. By default only the first request
-will be accepted.`,
-			},
-			cli.BoolFlag{
-				Name:  "ssh",
-				Usage: `Enable SSH on the new provisioners.`,
+				Name: "x5c-root",
+				Usage: `Root certificate (public key) used to validate the signature on X5C
+bootstrap tokens.`,
 			},
 		},
 		Description: `**step ca provisioner add** adds one or more provisioners
@@ -229,6 +240,11 @@ $ step ca provisioner add Amazon --type AWS --ca-config ca.json \
 Add an ACME provisioner.
 '''
 $ step ca provisioner add acme-smallstep --type ACME --ca-config ca.json
+'''
+
+Add an X5C provisioner.
+'''
+$ step ca provisioner add x5c-smallstep --type X5C --x5c-root x5cRoot.crt
 '''`,
 	}
 }
@@ -275,6 +291,8 @@ func addAction(ctx *cli.Context) (err error) {
 		list, err = addGCPProvisioner(ctx, name, provMap)
 	case provisioner.TypeACME:
 		list, err = addACMEProvisioner(ctx, name, provMap)
+	case provisioner.TypeX5C:
+		list, err = addX5CProvisioner(ctx, name, provMap)
 	default:
 		return errors.Errorf("unknown type %s: this should not happen", typ)
 	}
@@ -522,6 +540,48 @@ func addACMEProvisioner(ctx *cli.Context, name string, provMap map[string]bool) 
 	return
 }
 
+func addX5CProvisioner(ctx *cli.Context, name string, provMap map[string]bool) (list provisioner.List, err error) {
+	x5cRootFile := ctx.String("x5c-root")
+	if len(x5cRootFile) == 0 {
+		return nil, errs.RequiredWithFlagValue(ctx, "type", "x5c", "x5c-root")
+	}
+
+	rootB, err := ioutil.ReadFile(x5cRootFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error reading from %s", x5cRootFile)
+	}
+
+	roots, err := pemutil.ReadCertificateBundle(x5cRootFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error loading X5C Root certificates from %s", x5cRootFile)
+	}
+	for _, r := range roots {
+		if r.KeyUsage&x509.KeyUsageCertSign == 0 {
+			return nil, errors.Errorf("error: certificate with common name '%s' cannot be "+
+				"used as an X5C root certificate.\n\n"+
+				"X5C provisioner root certificates must have the 'Certificate Sign' key "+
+				"usage extension.", r.Subject.CommonName)
+		}
+
+	}
+	p := &provisioner.X5C{
+		Type:   provisioner.TypeX5C.String(),
+		Name:   name,
+		Claims: getClaims(ctx),
+		Roots:  string(rootB),
+	}
+
+	// Check for duplicates
+	if _, ok := provMap[p.GetID()]; !ok {
+		provMap[p.GetID()] = true
+	} else {
+		return nil, errors.Errorf("duplicated provisioner: CA config already contains a provisioner with ID==%s", p.GetID())
+	}
+
+	list = append(list, p)
+	return
+}
+
 func getClaims(ctx *cli.Context) *provisioner.Claims {
 	if ctx.Bool("ssh") {
 		enable := true
@@ -558,7 +618,9 @@ func parseProvisionerType(ctx *cli.Context) (provisioner.Type, error) {
 		return provisioner.TypeAzure, nil
 	case "acme":
 		return provisioner.TypeACME, nil
+	case "x5c":
+		return provisioner.TypeX5C, nil
 	default:
-		return 0, errs.InvalidFlagValue(ctx, "type", typ, "JWK, OIDC, AWS, Azure, GCP")
+		return 0, errs.InvalidFlagValue(ctx, "type", typ, "JWK, OIDC, AWS, Azure, GCP, ACME, X5C")
 	}
 }

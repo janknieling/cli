@@ -24,7 +24,8 @@ func certificateCommand() cli.Command {
 [**--not-before**=<time|duration>] [**--not-after**=<time|duration>]
 [**--san**=<SAN>] [**--acme**=<path>] [**--standalone**] [**--webroot**=<path>]
 [**--contact**=<email>] [**--http-listen**=<address>] [**--bundle**]
-[**--kty**=<type>] [**--curve**=<curve>] [**--size**=<size>] [**--console**]`,
+[**--kty**=<type>] [**--curve**=<curve>] [**--size**=<size>] [**--console**]
+[**--x5c-cert**=<path>] [**--x5c-key**=<path>]`,
 		Description: `**step ca certificate** command generates a new certificate pair
 
 ## POSITIONAL ARGUMENTS
@@ -84,6 +85,11 @@ $ step ca certificate joe@example.com joe.crt joe.key --issuer Google --console
 Request a new certificate with an RSA public key (default is ECDSA256):
 '''
 $ step ca certificate foo.internal foo.crt foo.key --kty RSA --size 4096
+'''
+
+Request a new certificate with an X5C provisioner:
+'''
+$ step ca certificate foo.internal foo.crt foo.key --x5c-cert x5c.cert --x5c-key x5c.key
 '''
 
 **step CA ACME** - In order to use the step CA ACME protocol you must add a
