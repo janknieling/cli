@@ -86,16 +86,16 @@ func (t *TokenGenerator) SignToken(sub string, sans []string, opts ...token.Opti
 }
 
 // RevokeToken generates a X.509 certificate revoke token.
-func (t *TokenGenerator) RevokeToken(sub string) (string, error) {
-	return t.Token(sub)
+func (t *TokenGenerator) RevokeToken(sub string, opts ...token.Options) (string, error) {
+	return t.Token(sub, opts...)
 }
 
 // SignSSHToken generates a SSH certificate signing token.
-func (t *TokenGenerator) SignSSHToken(sub, certType string, principals []string, notBefore, notAfter provisioner.TimeDuration) (string, error) {
+func (t *TokenGenerator) SignSSHToken(sub, certType string, principals []string, notBefore, notAfter provisioner.TimeDuration, opts ...token.Options) (string, error) {
 	return t.Token(sub, token.WithSSH(provisioner.SSHOptions{
 		CertType:    certType,
 		Principals:  principals,
 		ValidAfter:  notBefore,
 		ValidBefore: notAfter,
-	}))
+	}), opts...)
 }

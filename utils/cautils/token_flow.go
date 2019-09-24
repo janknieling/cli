@@ -132,7 +132,20 @@ func NewTokenFlow(ctx *cli.Context, typ int, subject string, sans []string, caUR
 		}
 		tokenGen := NewTokenGenerator("5", p.Name,
 			fmt.Sprintf("%s#%s", audience, p.GetID()), root, notBefore, notAfter, jwk)
-		return tokenGen.SignToken(subject, sans, token.WithX5CFile(x5cCertFile, jwk.Key))
+		switch typ {
+		case SignType:
+			return tokenGen.SignToken(subject, sans, token.WithX5CFile(x5cCertFile, jwk.Key))
+		case RevokeType:
+			return tokenGen.RevokeToken(subject, token.WithX5CFile(x5cCertFile, jwk.Key))
+		case SSHUserSignType:
+			return tokenGen.SignSSHToken(subject, provisioner.SSHUserCert, sans,
+				certNotBefore, certNotAfter, token.WithX5CFile(x5cCertFile, jwk.Key))
+		case SSHHostSignType:
+			return tokenGen.SignSSHToken(subject, provisioner.SSHHostCert, sans,
+				certNotBefore, certNotAfter, token.WithX5CFile(x5cCertFile, jwk.Key))
+		default:
+			return tokenGen.Token(subject, token.WithX5CFile(x5cCertFile, jwk.Key))
+		}
 	case *provisioner.GCP: // Do the identity request to get the token
 		sharedContext.DisableCustomSANs = p.DisableCustomSANs
 		return p.GetIdentityToken(subject, caURL)
