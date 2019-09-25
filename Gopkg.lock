@@ -311,7 +311,7 @@
 
 [[projects]]
   branch = "x5c"
-  digest = "1:7a47338eb6535e795f282892e448426540e3d8d15e01b733cc395a39ba891e30"
+  digest = "1:1a908f46ed3b35b80d19848fab3d7539d90f4cbe110837ee93a06022a483c464"
   name = "github.com/smallstep/certificates"
   packages = [
     "acme",
@@ -326,7 +326,7 @@
     "server",
   ]
   pruneopts = "UT"
-  revision = "430901f8b932870b89d96f203da67f9cd19cff3b"
+  revision = "6d053fa66834dc4a8614fe2ea546ab55934ea765"
 
 [[projects]]
   branch = "master"
@@ -338,7 +338,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9c1b7052fa8f2c918efd60ed5ae3c70ccbba08967c58ec71067535449a3ba220"
+  digest = "1:7d03323edb817ca94efaee5489cde6acd06ceeaca9e6eee106d2d6a90deca997"
   name = "github.com/smallstep/nosql"
   packages = [
     ".",
@@ -348,7 +348,7 @@
     "mysql",
   ]
   pruneopts = "UT"
-  revision = "a0934e12468769d8cbede3ed316c47a4b88de4ca"
+  revision = "f80b3f432de0662f07ebd58fe52b0a119fe5dcd9"
 
 [[projects]]
   branch = "master"

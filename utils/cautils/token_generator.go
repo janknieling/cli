@@ -51,9 +51,7 @@ func (t *TokenGenerator) Token(sub string, opts ...token.Options) (string, error
 	}
 
 	// Add custom options
-	for _, o := range opts {
-		tokOptions = append(tokOptions, o)
-	}
+	tokOptions = append(tokOptions, opts...)
 
 	// Add token validity
 	notBefore, notAfter := t.notBefore, t.notAfter
@@ -92,10 +90,11 @@ func (t *TokenGenerator) RevokeToken(sub string, opts ...token.Options) (string,
 
 // SignSSHToken generates a SSH certificate signing token.
 func (t *TokenGenerator) SignSSHToken(sub, certType string, principals []string, notBefore, notAfter provisioner.TimeDuration, opts ...token.Options) (string, error) {
-	return t.Token(sub, token.WithSSH(provisioner.SSHOptions{
+	opts = append([]token.Options{token.WithSSH(provisioner.SSHOptions{
 		CertType:    certType,
 		Principals:  principals,
 		ValidAfter:  notBefore,
 		ValidBefore: notAfter,
-	}), opts...)
+	})}, opts...)
+	return t.Token(sub, opts...)
 }

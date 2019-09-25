@@ -302,18 +302,33 @@ func OfflineTokenFlow(ctx *cli.Context, typ int, subject string, sans []string, 
 	}
 }
 
+func allowX5CProvisionerFilter(p provisioner.Interface) bool {
+	switch p.GetType() {
+	case provisioner.TypeX5C:
+		return true
+	default:
+		return false
+	}
+}
+
 func provisionerPrompt(ctx *cli.Context, provisioners provisioner.List) (provisioner.Interface, error) {
-	// Filter by type
-	provisioners = provisionerFilter(provisioners, func(p provisioner.Interface) bool {
-		switch p.GetType() {
-		case provisioner.TypeJWK, provisioner.TypeX5C, provisioner.TypeOIDC, provisioner.TypeACME:
-			return true
-		case provisioner.TypeGCP, provisioner.TypeAWS, provisioner.TypeAzure:
-			return true
-		default:
-			return false
-		}
-	})
+	switch {
+	// If x5c flags then only list x5c provisioners.
+	case ctx.IsSet("x5c-cert") || ctx.IsSet("x5c-key"):
+		provisioners = provisionerFilter(provisioners, allowX5CProvisionerFilter)
+	// List all available provisioners.
+	default:
+		provisioners = provisionerFilter(provisioners, func(p provisioner.Interface) bool {
+			switch p.GetType() {
+			case provisioner.TypeJWK, provisioner.TypeX5C, provisioner.TypeOIDC, provisioner.TypeACME:
+				return true
+			case provisioner.TypeGCP, provisioner.TypeAWS, provisioner.TypeAzure:
+				return true
+			default:
+				return false
+			}
+		})
+	}
 
 	if len(provisioners) == 0 {
 		return nil, errors.New("cannot create a new token: the CA does not have any provisioner configured")
